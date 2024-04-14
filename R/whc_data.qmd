@@ -1,0 +1,447 @@
+---
+title: "WHC_data"
+author: "Morten Hoel Mikkelsen"
+format: 
+  html:
+    self-contained: true
+    code-tools: 
+      source: true
+---
+
+## Bryophyte dry down curve
+
+In this code I have used the data collected in the lab as we dried bryophyte samples over the course of 16 days in order to make plots. The goal was to use these plots to see if there were any patterns as to how the samples dried, whether that would be species specific, growth condition etc. How fast the bryophyte samples dry out in a controlled environment is whats being tested.
+
+```{r}
+#Firstly the packages that are to be used are loaded
+
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(ggrepel)
+library(tidyr)
+library(usethis)
+
+create_from_github("MortenHoMi/Durin_data")
+
+#setting local to norwegian to avoid any conflicts regarding C&,C8,C%.
+Sys.setlocale(locale = "norwegian")
+
+
+trial1_data <- read_excel("C:/Users/Morten/Downloads/DURIN and DroughtNet Bryophytes.xlsx")
+
+Bryophyte_data <- read_excel("C:/Users/Morten/Downloads/DURIN & Droughtnet bryophytes, trial 2.xlsx", 
+    sheet = "Bryophyte_data_by_tray#")
+
+view(Bryophyte_data)
+
+#str(Bryophyte_data)
+
+Bryophyte_data <- Bryophyte_data |>
+  mutate('percent_remaining_day0' = ((saturated_weight_g)/
+                                          saturated_weight_g)*100 )|> 
+  mutate('percent_remaining_day1' = ((day1_weight_g) /
+                                  saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day2' = ((day2_weight_g)/
+                                  saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day3' = ((day3_weight_g)/
+                                  saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day4' = ((day4_weight_g)/
+                                  saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day5' = ((day5_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day6' = ((day6_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day7' = ((day7_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day8' = ((day8_weight_g)/saturated_weight_g)*100) |>
+  mutate('percent_remaining_day11' = ((day11_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day13' = ((day13_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('percent_remaining_day16' = ((day16_weight_g)/
+                                   saturated_weight_g)*100 ) |>
+  mutate('bryophyte_species_latin' = dominant_bryophyte_species) |>
+  mutate('t50' = ((saturated_weight_g - oven_dry_weight_g) / 2) + oven_dry_weight_g)    
+#saturated weight - oven dry weight /2 gives half water. Adding oven dry again gives the weight the samples had when at 50% water.
+
+  
+species_list <- c('CV','EN','VV','VM')
+Bryophyte_data <- Bryophyte_data %>%
+  mutate(species = sapply(str_extract_all(bryophyte_sample_nr,paste(species_list, collapse = '|')),toString))
+
+View(Bryophyte_data)
+
+
+
+Bryophyte_data$bryophyte_species_latin <- with(Bryophyte_data, factor(bryophyte_species_latin,
+                            levels = c("heiflette","furumose", "torvmose", "storkransmose", "etasjehusmose", "kystjamnemose", "ligner furumose, rC8d stengel", "storflettemose"), labels = c("Hypnum jutlandicum","Pleurozium schreberi","Sphagnopsida sp","Hylocomiadelphus triquetrus","Hylocomium splendens","Plagiothecium undulatum", "Hylocomiastrum pyrenaicum", "Hypnum cupressiforme")))
+
+
+Bryophyte_data$dominant_bryophyte_species <- gsub("ligner furumose, rC8d stengel", "Seterhusmose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("heiflette", "Heiflette", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("furumose", "Furumose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("torvmose", "Torvmose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("storkransmose", "Storkransmose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("etasjehusmose", "Etasjehusmose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("kystjamnemose", "Kystjamnemose", as.character(Bryophyte_data$dominant_bryophyte_species))
+Bryophyte_data$dominant_bryophyte_species <- gsub("storflettemose", "Storflettemose", as.character(Bryophyte_data$dominant_bryophyte_species))
+#Using gsub to replace the names, as to have each name with a capitall letter. 
+
+Bryophyte_data$time_start <- gsub("1899-12-31", "", as.character(Bryophyte_data$time_start))
+Bryophyte_data$time_stop <- gsub("1899-12-31", "", as.character(Bryophyte_data$time_stop))
+Bryophyte_data$start_water <- gsub("1899-12-31", "", as.character(Bryophyte_data$start_water))
+Bryophyte_data$stop_water <- gsub("1899-12-31", "", as.character(Bryophyte_data$stop_water))
+Bryophyte_data$day1_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day1_time))
+Bryophyte_data$day2_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day2_time))
+Bryophyte_data$day3_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day3_time))
+Bryophyte_data$day4_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day4_time))
+Bryophyte_data$day5_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day5_time))
+Bryophyte_data$day6_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day6_time))
+Bryophyte_data$day7_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day7_time))
+Bryophyte_data$day8_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day8_time))
+Bryophyte_data$day11_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day11_time))
+Bryophyte_data$day13_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day13_time))
+Bryophyte_data$day16_time <- gsub("1899-12-31", "", as.character(Bryophyte_data$day16_time))
+#removed every instance of the wrong date
+
+
+
+
+
+data <- Bryophyte_data %>%
+  pivot_longer((saturated_weight_g:day16_weight_g), 
+               names_to = "measurment_day", values_to = "weight_g") |>
+  pivot_longer((percent_remaining_day0:percent_remaining_day16), 
+               names_to = "days_dried", values_to = "percent_remaining")
+
+data$days_dried <- as.numeric(gsub("percent_remaining_day","",data$days_dried))
+data$measurment_day <- gsub("saturated_weight_g","0",data$measurment_day)
+data$measurment_day <- gsub("day","",data$measurment_day)
+data$measurment_day <- as.numeric(gsub("_weight_g","",data$measurment_day))
+data$treatment <- factor(data$treatment, levels = c('Amb (0)','Mod (60)', 'Ext (90)'))
+data$ageclass <- factor(data$ageclass, levels = c('Pioneer','Building','Mature'))
+
+
+WHC <- Bryophyte_data |>
+  summarize(
+    WHC = saturated_weight_g - oven_dry_weight_g
+  )
+view(WHC)          #just shows the water holding capacity for each sample in grams. could add as a column perhaps
+
+t50_day <- approx(data$weight_g, data$measurment_day, xout = Bryophyte_data$t50)
+view(t50_day)           #wrong values, IE first row says the point is at 4.000 and should take take 4.2 days, but actually its between day 8 and 13
+
+view(data)
+
+dataframe <- Bryophyte_data %>%
+  group_by(bryophyte_sample_nr,droughtnet_plot,treatment,dominant_bryophyte_species,saturated_weight_g) |>
+  summarize()
+#view(dataframe)
+
+
+dataframe_old <- trial1_data %>%
+  group_by(bryophyte_sample_nr,DroughNet_plotID,saturated_weight_g) |>
+  summarize()
+#view(dataframe_old)
+
+saturated_comparrison <- data.frame(
+  id = dataframe$bryophyte_sample_nr,
+  id2 = dataframe$droughtnet_plot,
+  treatment = dataframe$treatment,
+  saturated_trial2 = dataframe$saturated_weight_g,
+  saturated_trial1 = dataframe_old$saturated_weight_g,
+  dom_bryophyte = dataframe$dominant_bryophyte_species,
+  difference = (dataframe$saturated_weight_g - dataframe_old$saturated_weight_g)
+  )
+print(saturated_comparrison)
+
+data_CV <- data %>%
+  filter(grepl('CV', durin_plot))
+
+data_EN <- data %>%
+  filter(grepl('EN', durin_plot))
+
+data_VV <- data %>%
+  filter(grepl('VV', durin_plot))
+
+data_VM <- data %>%
+  filter(grepl('VM', durin_plot))
+
+
+
+
+
+data_open <- data |>
+  filter(habitat == "Open")
+
+#data_open
+
+data_forested <- data |>
+  filter(habitat == "Forested")
+
+#data_forested
+
+data_durin <- data %>%
+  drop_na(habitat)
+
+data_droughtnet <- data %>% 
+  drop_na(droughtnet_plot) |>
+  unite('droughtnet_sample', ageclass:droughtnet_plot, remove = FALSE)
+
+data_building <- data_droughtnet %>%
+  filter(ageclass == "Building")
+
+data_pioneer <- data_droughtnet %>%
+  filter(ageclass == "Pioneer")
+
+data_mature <- data_droughtnet %>%
+  filter(ageclass == "Mature")
+
+view(data_droughtnet)
+
+```
+
+
+Here I am going to calculate the time when the bryophyte samples have lost half of the water they had absorbed, which will be called T50. In order to do so there are some steps that needs to be done
+1) Calculate the weight of the samples when they have lost half the water weight. 
+2) The weighings have some gaps. Accomodate for this in the model. Regression perhaps?
+3) 
+
+
+```{r}
+#for half water it's the saturated weight minus the oven dry weight, thus removing any non-water weight.Then divide by 2 to have halfway point
+half_water <- (Bryophyte_data$saturated_weight_g - Bryophyte_data$oven_dry_weight_g)/2
+
+
+#Now we have half water weight, we add back in the dry weight. This weight will be the samples when they have half their water left.
+
+t50_point <- half_water + Bryophyte_data$oven_dry_weight_g
+
+
+#now the point of interest is when are the samples equal to this point. When does sample weight = t50_point.
+
+#first I want to check if any samples have a weight greater than the t50 point, to determine if any samples failed to dry half their water. 
+
+t50_check <- Bryophyte_data %>%
+  select(plotnr,day16_weight_g,t50) |>
+  filter(day16_weight_g >= t50_point)
+
+t50_check
+
+
+#Here we can see a single sample, ly_o_vm_2, didn't reach t50. The other remaining 66 samples did. lets make a dataset containing only samples dried beyond the t50 point.
+
+test <- data%>%
+  pivot_wider(names_from = days_dried, values_from = percent_remaining) |>     #data has two columns that have been made longer, in order to
+  select(plotnr,weight_g,measurment_day,t50) |>                                 #not have 12 duplicates of every weight the percents got wide.
+  group_by(plotnr) |> 
+  filter(weight_g <= t50) |>
+  mutate(measurment_day = measurment_day[1])
+
+test
+
+
+```
+
+
+
+```{r}
+plotDURIN <- ggplot(data = data_durin, 
+                aes(y = weight_g, 
+                    x = measurment_day, 
+                    group = durin_plot, 
+                    color = bryophyte_species_latin)) +
+  labs(x="Days dried", y="weight (g)") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() 
+
+plotCV <- ggplot(data = data_CV,
+       aes(x = measurment_day, 
+       y = weight_g,
+       group = durin_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="weight (g)") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7) 
+
+plotEN <- ggplot(data = data_EN,
+       aes(x = measurment_day, 
+       y = weight_g,
+       group = durin_plot,
+       color = bryophyte_species_latin)) +
+  labs(x="Days dried", y="weight (g)") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7) 
+
+plotVV <- ggplot(data = data_VV,
+       aes(x = measurment_day, 
+       y = weight_g,
+       group = durin_plot,
+       color = bryophyte_species_latin)) +
+  labs(x="Days dried", y="weight (g)") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7) 
+
+plotVM <- ggplot(data = data_VM,
+       aes(x = measurment_day,
+       y = weight_g,
+       group = durin_plot,
+       color = bryophyte_species_latin)) +
+  labs(x="Days dried", y="weight (g)") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7) 
+
+
+
+plotSPECIESDURIN <- ggplot(data = data_durin, 
+                aes(y = weight_g, 
+                    x = measurment_day,
+                                      group = durin_plot, color = species)) +
+  labs(x="Days dried", y="weight (g)") +
+  facet_grid(habitat~species) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotPIO <- ggplot(data = data_pioneer, 
+                aes(y = weight_g, 
+                    x = measurment_day,
+                    group = droughtnet_sample, 
+                    color = bryophyte_species_latin)) +
+  facet_grid(treatment~ageclass) +
+  geom_line() +
+  labs(x = "Days dried", y="weight (g)") +
+  geom_point(size = 0.7)
+
+
+plotBUI <- ggplot(data = data_building, 
+                aes(y = weight_g, 
+                    x = measurment_day,
+                    group = droughtnet_sample, 
+                    color = bryophyte_species_latin)) +
+  facet_grid(treatment~ageclass) +
+  geom_line() +
+  labs(x = "Days dried", y="weight (g)") +
+  geom_point(size = 0.7)
+
+
+plotMAT <- ggplot(data = data_mature, 
+                aes(y = weight_g, 
+                    x = measurment_day,
+                    group = droughtnet_sample, 
+                    color = bryophyte_species_latin)) +
+  facet_grid(treatment~ageclass) +
+  geom_line() +
+  labs(x = "Days dried", y="Weight (g)") +
+  geom_point(size = 0.7)
+
+plotDROUGHTNET <- ggplot(data = data_droughtnet, 
+                aes(y = weight_g, 
+                    x = measurment_day,
+                    group = droughtnet_sample, 
+                    color = bryophyte_species_latin)) +
+  facet_grid(treatment~ageclass) +
+  geom_line() +
+  labs(x = "Days dried", y="Weight (g)") +
+  geom_point(size = 0.7)
+
+
+```
+
+```{r}
+plotCV + ggtitle("Dry down curve by species CV")
+plotEN + ggtitle("Dry down curve by species EN")
+plotVV + ggtitle("Dry down curve by species VV")
+plotVM + ggtitle("Dry down curve by species VM")
+```
+
+```{r}
+plotDURIN + ggtitle("DURIN open and forested dry down curves")
+plotSPECIESDURIN + ggtitle("DURIN open and forested dry down curved by species")
+```
+
+```{r}
+plotPIO + ggtitle("Droughtnet pioneer ageclass dry down curve")
+plotBUI + ggtitle("Droughtnet building ageclass dry down curve")
+plotMAT + ggtitle("Droughtnet mature ageclass dry down curve")
+plotDROUGHTNET + ggtitle("Droughtnet dry down curve") 
+```
+
+```{r}
+plotCV_percent <- ggplot(data = data_CV,
+       aes(x = days_dried,
+       y = percent_remaining,
+       group = durin_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotEN_percent <- ggplot(data = data_EN,
+       aes(x = days_dried,
+       y = percent_remaining,
+       group = durin_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotVV_percent <- ggplot(data = data_VV,
+       aes(x = days_dried,
+       y = percent_remaining,
+       group = durin_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotVM_percent <- ggplot(data = data_VM,
+       aes(x = days_dried,
+       y = percent_remaining,
+       group = durin_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_wrap(~habitat, ncol = 1) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotdurin_percent <- ggplot(data = data_durin,
+       aes(x = days_dried,
+           y = percent_remaining,
+           group = durin_plot,
+           color = bryophyte_species_latin)) +
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_grid(species~habitat) +
+  geom_line() +
+  geom_point(size = 0.8)
+  
+plotCV_percent + ggtitle("Percent original mass remaining at day, species CV")
+plotEN_percent + ggtitle("Percent original mass remaining at day, species EN")
+plotVM_percent + ggtitle("Percent original mass remaining at day, species VM")
+plotVV_percent + ggtitle("Percent original mass remaining at day, species VV")
+
+plotdurin_percent + ggtitle("Percent original mass remaining at day, DURIN")
+```
+
+```{r}
+plotdroughtnet_percent <- ggplot(data = data_droughtnet,
+       aes(x = days_dried,
+       y = percent_remaining,
+       group = droughtnet_plot,
+       color = bryophyte_species_latin)) + 
+  labs(x="Days dried", y="Percent of original mass remaining") +
+  facet_grid(treatment~ageclass) +
+  geom_line() +
+  geom_point(size = 0.7)
+
+plotdroughtnet_percent + ggtitle('Percent loss per day for Droughtnet, based of ageclass and treatment')
+
+```
