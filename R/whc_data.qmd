@@ -23,8 +23,6 @@ library(ggrepel)
 library(tidyr)
 library(usethis)
 
-create_from_github("MortenHoMi/Durin_data")
-
 #setting local to norwegian to avoid any conflicts regarding C&,C8,C%.
 Sys.setlocale(locale = "norwegian")
 
